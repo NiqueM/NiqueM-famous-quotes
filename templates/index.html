@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Famous Quotes</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">❝</span>
+        <span class="logo-text">Famous Quotes</span>
+      </div>
+      <p class="header-sub">100 timeless words of wisdom</p>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ═══════════════════════ HERO QUOTE ════════════════════════ -->
+    <section class="hero-section" aria-label="Random quote of the moment">
+      <div class="hero-card" id="hero-card">
+        <div class="hero-quote-wrap">
+          <span class="quote-mark open-quote" aria-hidden="true">❝</span>
+          <blockquote id="hero-text" class="hero-text">Loading…</blockquote>
+          <span class="quote-mark close-quote" aria-hidden="true">❞</span>
+        </div>
+        <footer class="hero-footer">
+          <cite id="hero-author" class="hero-author">—</cite>
+          <span id="hero-category" class="category-badge">—</span>
+        </footer>
+      </div>
+      <button id="btn-random" class="btn btn-primary" aria-label="Show a new random quote">
+        <span class="btn-icon">🔀</span> New Random Quote
+      </button>
+    </section>
+
+    <!-- ══════════════════════ SEARCH & FILTER ════════════════════ -->
+    <section class="search-section" aria-label="Search and filter quotes">
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            id="search-input"
+            class="search-input"
+            placeholder="Search by keyword or author…"
+            autocomplete="off"
+            aria-label="Search quotes by keyword or author"
+          />
+        </div>
+
+        <div class="filter-wrap">
+          <label for="category-filter" class="sr-only">Filter by category</label>
+          <select id="category-filter" class="category-select" aria-label="Filter by category">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="search-actions">
+          <button id="btn-clear" class="btn btn-ghost" aria-label="Clear search and filters">
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════ RESULTS GRID ══════════════════════ -->
+    <section class="results-section" id="results-section" aria-live="polite" aria-label="Quote results">
+      <div class="results-header" id="results-header" hidden>
+        <p id="results-count" class="results-count"></p>
+      </div>
+      <div id="quotes-grid" class="quotes-grid"></div>
+      <p id="no-results" class="no-results" hidden>No quotes matched your search. Try different keywords.</p>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Built with ❤️ using Python Flask &amp; Vanilla JavaScript</p>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
