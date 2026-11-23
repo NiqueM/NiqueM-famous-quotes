@@ -75,6 +75,12 @@ function displayHeroQuote(quote) {
     heroText.textContent     = quote.text;
     heroAuthor.textContent   = `— ${quote.author}`;
     heroCategory.textContent = quote.category;
+    heroCategory.setAttribute('data-category', quote.category);
+    heroCategory.style.cursor = 'pointer';
+    heroCategory.title = `Filter by category: ${quote.category}`;
+    heroAuthor.setAttribute('data-author', quote.author);
+    heroAuthor.style.cursor = 'pointer';
+    heroAuthor.title = `Search quotes by ${quote.author}`;
 
     heroCard.classList.remove('fade-out', 'fade-in');
     // Trigger reflow so the animation restarts
@@ -153,8 +159,8 @@ function buildQuoteCard(quote, searchTerm = '') {
     <button class="btn-copy" title="Copy to clipboard" aria-label="Copy quote to clipboard">📋</button>
     <p class="card-text">${highlightedText}</p>
     <footer class="card-footer">
-      <span class="card-author">${highlightedAuthor}</span>
-      <span class="category-badge">${escapeHTML(quote.category)}</span>
+      <span class="card-author clickable-filter" data-author="${escapeHTML(quote.author)}" title="Search quotes by ${escapeHTML(quote.author)}">${highlightedAuthor}</span>
+      <span class="category-badge clickable-filter" data-category="${escapeHTML(quote.category)}" title="Filter by category: ${escapeHTML(quote.category)}">${escapeHTML(quote.category)}</span>
     </footer>
   `;
 
@@ -193,8 +199,10 @@ function renderQuotes(quotes, searchTerm = '') {
 
 // ── Search & Filter ────────────────────────────────────────────────
 
-/** Read current form state and fetch matching quotes. */
-async function runSearch() {
+/** Read current form state and fetch matching quotes.
+ * @param {boolean} shouldScroll - only scroll when explicitly requested (Enter, click filter/category, etc.)
+ */
+async function runSearch(shouldScroll = false) {
   const q        = searchInput.value.trim();
   const category = categoryFilter.value;
 
@@ -207,10 +215,26 @@ async function runSearch() {
   try {
     const quotes = await API.quotes({ q, category });
     renderQuotes(quotes, q);
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (shouldScroll) {
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   } catch (err) {
     console.error('Search failed:', err);
   }
+}
+
+/** Helper to filter directly by an author name */
+function filterByAuthor(authorName) {
+  searchInput.value = authorName;
+  categoryFilter.value = '';
+  runSearch(true);
+}
+
+/** Helper to filter directly by a category */
+function filterByCategory(categoryName) {
+  categoryFilter.value = categoryName;
+  searchInput.value = '';
+  runSearch(true);
 }
 
 function hideResults() {
@@ -292,20 +316,41 @@ btnClear.addEventListener('click', clearSearch);
 btnExport.addEventListener('click', exportToCSV);
 themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked));
 
-// Live search: debounced while typing
-const debouncedSearch = debounce(runSearch, 300);
+// Live search: debounced while typing (no scroll)
+const debouncedSearch = debounce(() => runSearch(false), 300);
 searchInput.addEventListener('input', debouncedSearch);
 
-// Also run immediately on Enter key
+// Also run immediately on Enter key (scroll to results)
 searchInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    runSearch();
+    runSearch(true);
   }
 });
 
-// Auto-search when category changes
-categoryFilter.addEventListener('change', runSearch);
+// Auto-search when category changes (scroll to results)
+categoryFilter.addEventListener('change', () => runSearch(true));
+
+// Clickable author & category tags delegation on results and hero
+heroCategory.addEventListener('click', () => {
+  const cat = heroCategory.getAttribute('data-category');
+  if (cat && cat !== '—') filterByCategory(cat);
+});
+
+heroAuthor.addEventListener('click', () => {
+  const auth = heroAuthor.getAttribute('data-author');
+  if (auth && auth !== '—') filterByAuthor(auth);
+});
+
+quotesGrid.addEventListener('click', e => {
+  const target = e.target.closest('.clickable-filter');
+  if (!target) return;
+  if (target.dataset.author) {
+    filterByAuthor(target.dataset.author);
+  } else if (target.dataset.category) {
+    filterByCategory(target.dataset.category);
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────────
 
