@@ -16,6 +16,14 @@
         <span class="logo-text">Famous Quotes</span>
       </div>
       <p class="header-sub">100 timeless words of wisdom</p>
+      <div class="theme-toggle" aria-label="Toggle colour theme">
+        <span class="toggle-label" aria-hidden="true">🌙</span>
+        <label class="toggle-switch" for="theme-toggle-input" title="Switch to light mode">
+          <input type="checkbox" id="theme-toggle-input" aria-label="Toggle light/dark mode" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+        <span class="toggle-label" aria-hidden="true">☀️</span>
+      </div>
     </div>
   </header>
 
@@ -62,6 +70,9 @@
         </div>
 
         <div class="search-actions">
+          <button id="btn-export" class="btn btn-ghost" aria-label="Export quotes to CSV">
+            📥 Export CSV
+          </button>
           <button id="btn-clear" class="btn btn-ghost" aria-label="Clear search and filters">
             ✕ Clear
           </button>

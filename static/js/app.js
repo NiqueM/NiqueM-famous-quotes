@@ -17,19 +17,25 @@ const API = {
 };
 
 // ── DOM refs ───────────────────────────────────────────────────────
-const heroCard       = document.getElementById('hero-card');
-const heroText       = document.getElementById('hero-text');
-const heroAuthor     = document.getElementById('hero-author');
-const heroCategory   = document.getElementById('hero-category');
-const btnRandom      = document.getElementById('btn-random');
-const searchInput    = document.getElementById('search-input');
-const categoryFilter = document.getElementById('category-filter');
-const btnClear       = document.getElementById('btn-clear');
-const quotesGrid     = document.getElementById('quotes-grid');
-const resultsSection = document.getElementById('results-section');
-const resultsHeader  = document.getElementById('results-header');
-const resultsCount   = document.getElementById('results-count');
-const noResults      = document.getElementById('no-results');
+const heroCard        = document.getElementById('hero-card');
+const heroText        = document.getElementById('hero-text');
+const heroAuthor      = document.getElementById('hero-author');
+const heroCategory    = document.getElementById('hero-category');
+const btnRandom       = document.getElementById('btn-random');
+const searchInput     = document.getElementById('search-input');
+const categoryFilter  = document.getElementById('category-filter');
+const btnClear        = document.getElementById('btn-clear');
+const btnExport       = document.getElementById('btn-export');
+const themeToggle     = document.getElementById('theme-toggle-input');
+const quotesGrid      = document.getElementById('quotes-grid');
+const resultsSection  = document.getElementById('results-section');
+const resultsHeader   = document.getElementById('results-header');
+const resultsCount    = document.getElementById('results-count');
+const noResults       = document.getElementById('no-results');
+
+// ── State ──────────────────────────────────────────────────────────
+/** Tracks whatever quotes are currently visible in the grid. Used by Export CSV. */
+let currentResults = [];
 
 // ── Utilities ──────────────────────────────────────────────────────
 
@@ -110,6 +116,29 @@ async function loadCategories() {
 // ── Quote Cards ────────────────────────────────────────────────────
 
 /**
+ * Copy a quote's text and author to the clipboard.
+ * Shows a brief "✓ Copied!" state on the button, then resets.
+ */
+async function copyQuoteToClipboard(quote, btn) {
+  const formatted = `"${quote.text}" — ${quote.author}`;
+  try {
+    await navigator.clipboard.writeText(formatted);
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    btn.title = 'Copied!';
+    setTimeout(() => {
+      btn.textContent = '📋';
+      btn.classList.remove('copied');
+      btn.title = 'Copy to clipboard';
+    }, 2000);
+  } catch {
+    // Fallback for browsers that block clipboard without user gesture
+    btn.textContent = '✗';
+    setTimeout(() => { btn.textContent = '📋'; }, 1500);
+  }
+}
+
+/**
  * Build and return a quote card DOM element.
  * Highlights `searchTerm` in both text and author if provided.
  */
@@ -121,18 +150,26 @@ function buildQuoteCard(quote, searchTerm = '') {
   const highlightedAuthor = highlight(quote.author, searchTerm);
 
   card.innerHTML = `
+    <button class="btn-copy" title="Copy to clipboard" aria-label="Copy quote to clipboard">📋</button>
     <p class="card-text">${highlightedText}</p>
     <footer class="card-footer">
       <span class="card-author">${highlightedAuthor}</span>
       <span class="category-badge">${escapeHTML(quote.category)}</span>
     </footer>
   `;
+
+  // Attach copy listener directly to the button element (avoids re-querying)
+  card.querySelector('.btn-copy').addEventListener('click', function () {
+    copyQuoteToClipboard(quote, this);
+  });
+
   return card;
 }
 
 /** Render an array of quotes into the grid. */
 function renderQuotes(quotes, searchTerm = '') {
   quotesGrid.innerHTML = '';
+  currentResults = quotes; // keep state for CSV export
 
   if (quotes.length === 0) {
     noResults.hidden = false;
@@ -180,19 +217,80 @@ function hideResults() {
   quotesGrid.innerHTML = '';
   resultsHeader.hidden = true;
   noResults.hidden = true;
+  currentResults = [];
 }
 
 function clearSearch() {
-  searchInput.value      = '';
-  categoryFilter.value   = '';
+  searchInput.value     = '';
+  categoryFilter.value  = '';
   hideResults();
   searchInput.focus();
+}
+
+// ── Export CSV ─────────────────────────────────────────────────────
+
+/**
+ * Convert an array of quote objects to a CSV string and trigger a download.
+ * If the grid has results, export those; otherwise fetch and export all 100.
+ */
+async function exportToCSV() {
+  let quotes = currentResults.length > 0 ? currentResults : null;
+
+  if (!quotes) {
+    try {
+      quotes = await API.quotes();
+    } catch {
+      alert('Could not fetch quotes for export. Is the server running?');
+      return;
+    }
+  }
+
+  const escape = val => `"${String(val).replace(/"/g, '""')}"`;
+  const header = ['ID', 'Author', 'Category', 'Quote'].map(escape).join(',');
+  const rows   = quotes.map(q =>
+    [q.id, q.author, q.category, q.text].map(escape).join(',')
+  );
+  const csv    = [header, ...rows].join('\r\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const filename = currentResults.length > 0
+    ? `quotes-filtered-${Date.now()}.csv`
+    : 'famous-quotes-all.csv';
+
+  a.href     = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Theme Toggle ───────────────────────────────────────────────────
+
+function applyTheme(isLight) {
+  document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+  themeToggle.checked = isLight;
+  localStorage.setItem('fq-theme', isLight ? 'light' : 'dark');
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('fq-theme');
+  // Default to dark; respect saved preference or OS preference
+  const preferLight = saved
+    ? saved === 'light'
+    : window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(preferLight);
 }
 
 // ── Event Listeners ────────────────────────────────────────────────
 
 btnRandom.addEventListener('click', loadRandomQuote);
 btnClear.addEventListener('click', clearSearch);
+btnExport.addEventListener('click', exportToCSV);
+themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked));
 
 // Live search: debounced while typing
 const debouncedSearch = debounce(runSearch, 300);
@@ -212,5 +310,6 @@ categoryFilter.addEventListener('change', runSearch);
 // ── Init ───────────────────────────────────────────────────────────
 
 (async function init() {
+  initTheme();
   await Promise.all([loadRandomQuote(), loadCategories()]);
 })();
